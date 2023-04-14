@@ -1,4 +1,5 @@
 import requests
+from opentsdb_py_client.utils import Client, Query, MetricQueryBuilder, TSUIDQueryBuilder
 
 
 class Client():
