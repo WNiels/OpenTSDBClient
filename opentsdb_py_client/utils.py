@@ -14,6 +14,33 @@ class Client():
         self._port = port
         self._complete_url = f'{self._url}:{self._port}'
 
+    @property
+    def url(self) -> str:
+        """Returns the OpenTSDB server url.
+
+        Returns:
+            str: OpenTSDB server url.
+        """
+        return self._url
+    
+    @property
+    def port(self) -> int:
+        """Returns the OpenTSDB server port.
+
+        Returns:
+            int: OpenTSDB server port.
+        """
+        return self._port
+    
+    @property
+    def complete_url(self) -> str:
+        """Returns the complete OpenTSDB server url.
+
+        Returns:
+            str: Complete OpenTSDB server url.
+        """
+        return self._complete_url
+
     def aggregators(self) -> list:
         """Returns a list of all available aggregators.
         The list is requested from the set OpenTSDB server.
@@ -167,105 +194,114 @@ class Request:
 
 
 class RequestBuilder:
-    def __init__(self, client: Client, verb: str, start: str = None, end: str = None, queries: List["QueryBuilder"] = None, no_annotations: bool = None,
-                 global_annotations: bool = None, ms_resolution: bool = None, show_tsuids: bool = None, show_summary: bool = None,
-                 show_stats: bool = None, show_query: bool = None, delete: bool = None, time_zone: str = None, use_calendar: bool = None
-                 ):
+    _BASE_QUERY_URL = "/api/query"
+
+    def __init__(self, client: Client, verb: str, **parameters):
         self._client = client
         self._verb = verb
-        self._start = start
-        self._end = end
-        self._queries = queries if queries is not None else []
-        self._no_annotations = no_annotations
-        self._global_annotations = global_annotations
-        self._ms_resolution = ms_resolution
-        self._show_tsuids = show_tsuids
-        self._show_summary = show_summary
-        self._show_stats = show_stats
-        self._show_query = show_query
-        self._delete = delete
-        self._time_zone = time_zone
-        self._use_calendar = use_calendar
+        self._parameters = parameters if parameters is not None else {}
+        self._parameters.setdefault("queries", [])
 
     class Verb:
         GET = "GET"
         POST = "POST"
         DELETE = "DELETE"
 
+    class Parameter:
+        START = "start"
+        END = "end"
+        QUERIES = "queries"
+        NO_ANNOTATIONS = "no_annotations"
+        GLOBAL_ANNOTATIONS = "global_annotations"
+        MS_RESOLUTION = "ms_resolution"
+        SHOW_TSUIDS = "show_tsuids"
+        SHOW_SUMMARY = "show_summary"
+        SHOW_STATS = "show_stats"
+        SHOW_QUERY = "show_query"
+        DELETE = "delete"
+        TIME_ZONE = "time_zone"
+        USE_CALENDAR = "use_calendar"
+
     @builder
     def start(self, start: str) -> "RequestBuilder":
-        self._start = start
+        self._parameters["start"] = start
 
     @builder
     def end(self, end: str) -> "RequestBuilder":
-        self._end = end
+        self._parameters["end"] = end
 
     @builder
     def query(self, query: "QueryBuilder") -> "RequestBuilder":
-        self._queries.append(query)
+        self._parameters["queries"].append(query)
 
     @builder
     def no_annotations(self, no_annotations: bool) -> "RequestBuilder":
-        self._no_annotations = no_annotations
+        self._parameters["no_annotations"] = no_annotations
 
     @builder
     def global_annotations(self, global_annotations: bool) -> "RequestBuilder":
-        self._global_annotations = global_annotations
+        self._parameters["global_annotations"] = global_annotations
 
     @builder
     def ms_resolution(self, ms_resolution: bool) -> "RequestBuilder":
-        self._ms_resolution = ms_resolution
+        self._parameters["ms_resolution"] = ms_resolution
 
     @builder
     def show_tsuids(self, show_tsuids: bool) -> "RequestBuilder":
-        self._show_tsuids = show_tsuids
+        self._parameters["show_tsuids"] = show_tsuids
 
     @builder
     def show_summary(self, show_summary: bool) -> "RequestBuilder":
-        self._show_summary = show_summary
+        self._parameters["show_summary"] = show_summary
 
     @builder
     def show_stats(self, show_stats: bool) -> "RequestBuilder":
-        self._show_stats = show_stats
+        self._parameters["show_stats"] = show_stats
 
     @builder
     def show_query(self, show_query: bool) -> "RequestBuilder":
-        self._show_query = show_query
+        self._parameters["show_query"] = show_query
 
     @builder
     def delete(self, delete: bool) -> "RequestBuilder":
-        self._delete = delete
+        self._parameters["delete"] = delete
 
     @builder
     def time_zone(self, time_zone: str) -> "RequestBuilder":
-        self._time_zone = time_zone
+        self._parameters["time_zone"] = time_zone
 
     @builder
     def use_calendar(self, use_calendar: bool) -> "RequestBuilder":
-        self._use_calendar = use_calendar
+        self._parameters["use_calendar"] = use_calendar
 
     @builder
     def add_queries(self, queries: List["QueryBuilder"]) -> "RequestBuilder":
-        self._queries.extend(queries)
+        self._parameters["queries"].extend(queries)
 
     @builder
     def add_metric_query(self, metric: str, aggregator: str, downsample: str = None, rate: bool = None, rate_options: str = None,
                          explicit_tags: bool = None, filters: List["Filter"] = None, percentiles: List[float] = None, rollup_usage: str = None) -> "RequestBuilder":
-        self._queries.append(MetricQueryBuilder(metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
+        self._parameters["queries"].append(MetricQueryBuilder(metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
                                                  explicit_tags=explicit_tags, filters=filters, percentiles=percentiles, rollup_usage=rollup_usage))
 
     @builder
     def add_tsuids_query(self, metric: str, aggregator: str, downsample: str = None, rate: bool = None, rate_options: str = None,
                          explicit_tags: bool = None, filters: List["Filter"] = None, percentiles: List[float] = None, rollup_usage: str = None) -> "RequestBuilder":
-        self._queries.append(TSUIDQueryBuilder(
+        self._parameters["queries"].append(TSUIDQueryBuilder(
             metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
             explicit_tags=explicit_tags, filters=filters, percentiles=percentiles, rollup_usage=rollup_usage))
 
     def validate(self) -> None:
         pass
 
+    def _parameter_string(self) -> str:
+        param = "&".join([f"{k}={str(v)}" if k != "queries" else "" for k, v in self._parameters.items()])
+        for query in self._parameters["queries"]:
+            param += f"&{query}"
+        return param
+
     def __str__(self) -> str:
-        return "This is a Base class.  Please use either GetRequestBuilder, PostRequestBuilder, or DeleteRequestBuilder."
+        return f"{self._verb} {self._client.complete_url}{self._BASE_QUERY_URL}?{self._parameter_string()}"
 
     def __repr__(self) -> str:
         pass
@@ -309,6 +345,7 @@ class QueryBuilder:
 
 
 class MetricQueryBuilder(QueryBuilder):
+    TYPE = "m"
 
     def __str__(self) -> str:
         """Gnerates the query string for the metric query
@@ -361,6 +398,7 @@ class MetricQueryBuilder(QueryBuilder):
 
 
 class TSUIDQueryBuilder(QueryBuilder):
+    TYPE = "tsuid"
     pass
 
 
@@ -402,4 +440,5 @@ if __name__ == "__main__":
         percentiles=[0.5, 0.95],
         rollup_usage="ROLLUP_NOFALLBACK"
     )
-    print(query)
+
+    print(RequestBuilder(Client(url='http://localhost', port=2222), verb=RequestBuilder.Verb.GET).query(query))
