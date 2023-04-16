@@ -1,5 +1,5 @@
 import requests
-from typing import Callable, List, Union
+from typing import Any, Callable, Dict, List, Tuple, Union
 
 
 class Client():
@@ -291,13 +291,30 @@ class RequestBuilder:
             metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
             explicit_tags=explicit_tags, filters=filters, percentiles=percentiles, rollup_usage=rollup_usage))
 
+    def parameters(self) -> List[Tuple[str, Any]]:
+        """Returns a list of tuples containing the parameters for the request.
+
+        Returns:
+            List[Tuple[str, Any]]: A list of tuples containing the parameters for the request.
+        """        
+        params = []
+        for k, v in self._parameters.items():
+            if k == "queries" and len(v) > 0:
+                params.extend(q.as_param() for q in v)
+            else:
+                params.append((k, v))
+        return params
+
     def validate(self) -> None:
+        # TODO: Impleement validation
         pass
 
+    def run(self) -> requests.Response:
+        self.validate()
+        return requests.request(self._verb, self._client.complete_url + self._BASE_QUERY_URL, params=self.parameters())
+
     def _parameter_string(self) -> str:
-        param = "&".join([f"{k}={str(v)}" if k != "queries" else "" for k, v in self._parameters.items()])
-        for query in self._parameters["queries"]:
-            param += f"&{query}"
+        param = "&".join(self.parameters())
         return param
 
     def __str__(self) -> str:
@@ -340,6 +357,9 @@ class QueryBuilder:
         self._percentiles = percentiles if percentiles is not None else []
         self._rollup_usage = rollup_usage
 
+    def as_param(self) -> str:
+        return (self.TYPE, str(self))
+
     def __str__(self) -> str:
         return "This method should be overridden by the subclass. Please use either MetricQueryBuilder or TSUIDQueryBuilder."
 
@@ -355,7 +375,7 @@ class MetricQueryBuilder(QueryBuilder):
         Returns:
             str: The query string
         """
-        string = f'm={self._aggregator}:'
+        string = f'{self._aggregator}:'
 
         # [rate[{counter[,<counter_max>[,<reset_value>]]}]:]
         if self._rate is not None:
