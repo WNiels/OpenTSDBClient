@@ -17,3 +17,10 @@ class TestRateOptions(unittest.TestCase):
     def test_all_values_given(self):
         self.assertEqual(self.rate_options_valid.__str__(), "{False,100,1000}")
         self.assertEqual(self.rate_options_defaults_valid.__str__(), "{,,1000}")
+
+class TestFilter(unittest.TestCase):
+    def setUp(self) -> None:
+        self.filter_valid = opentsdb.Filter(type="wildcard", tagk="tagk", filter="filter", group_by=False)
+
+    def test_all_values_given(self):
+        self.assertEqual(self.filter_valid.__str__(), "tagk=wildcard(filter)")

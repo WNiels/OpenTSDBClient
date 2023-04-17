@@ -3,6 +3,10 @@ from typing import Any, Callable, Dict, List, Tuple, Union
 
 
 class Client():
+    ENDPOINT_AGGREGATORS = '/api/aggregators'
+    ENDPOINT_VERSION = '/api/version'
+    ENDPOINT_CONFIG = '/api/config'
+
     def __init__(self, url: str, port: int):
         """Initializes the OpenTSDB class.
 
@@ -13,6 +17,9 @@ class Client():
         self._url = url
         self._port = port
         self._complete_url = f'{self._url}:{self._port}'
+        self._server_config = {}
+        self._server_version = {}
+        self._server_aggregators = []
 
     @property
     def url(self) -> str:
@@ -41,29 +48,19 @@ class Client():
         """
         return self._complete_url
 
+
+    def update_aggregators(self) -> None:
+        url = f'{self._complete_url}{self.ENDPOINT_AGGREGATORS}'
+        self._server_aggregators = requests.get(url=url).json()
+
+    @property
     def aggregators(self) -> list:
-        """Returns a list of all available aggregators.
-        The list is requested from the set OpenTSDB server.
-
-        URL: http://opentsdb.net/docs/build/html/api_http/aggregators.html
-
-        Example response:
-        `[
-            "min",
-            "sum",
-            "max",
-            "avg",
-            "dev"
-        ]`
-
-        Returns:
-            list: List of all available aggregators.
-        """
-        url = f'{self._complete_url}/api/aggregators'
-        return requests.get(url=url).json()
-
-    def version(self) -> dict:
-        """Returns the version of the set OpenTSDB server.
+        if not self._server_aggregators:
+            self.update_aggregators()
+        return self._server_aggregators
+    
+    def update_version(self) -> None:
+        """Updates the servers version information.
 
         URL: http://opentsdb.net/docs/build/html/api_http/version.html
 
@@ -82,11 +79,17 @@ class Client():
         Returns:
             dict: Version of the set OpenTSDB server.
         """
-        url = f'{self._complete_url}/api/version'
-        return requests.get(url=url).json()
+        url = f'{self._complete_url}{self.ENDPOINT_VERSION}'
+        self._server_version = requests.get(url=url).json()
 
-    def config(self) -> dict:
-        """Returns the configuration of the set OpenTSDB server.
+    @property
+    def version(self) -> dict:
+        if not self._server_version:
+            self.update_version()
+        return self._server_version
+    
+    def update_config(self) -> None:
+        """Updates the locally stored server configuration.
 
         URL: http://opentsdb.net/docs/build/html/api_http/config.html
 
@@ -133,11 +136,15 @@ class Client():
             "tsd.network.reuse_address": "true",
             "tsd.rpc.plugins": "net.opentsdb.tsd.DummyRpcPlugin"
         }`
-        Returns:
-            dict: Configuration of the set OpenTSDB server.
         """
-        url = f'{self._complete_url}/api/config'
-        return requests.get(url=url).json()
+        url = f'{self._complete_url}{self.ENDPOINT_CONFIG}'
+        self._server_config = requests.get(url=url).json()
+
+    @property
+    def config(self) -> dict:
+        if not self._server_config:
+            self.update_config()
+        return self._server_config
 
     def request(self) -> 'Request':
         """Returns a new Request object.
@@ -309,12 +316,15 @@ class RequestBuilder:
         # TODO: Impleement validation
         pass
 
+    def build_request(self) -> requests.Request:
+        return requests.Request(self._verb, self._client.complete_url + self._BASE_QUERY_URL, params=self.parameters())
+
     def run(self) -> requests.Response:
         self.validate()
         return requests.request(self._verb, self._client.complete_url + self._BASE_QUERY_URL, params=self.parameters())
 
     def _parameter_string(self) -> str:
-        param = "&".join(self.parameters())
+        param = "&".join(f'{p[0]}={p[1]}' for p in self.parameters())
         return param
 
     def __str__(self) -> str:
@@ -464,4 +474,4 @@ if __name__ == "__main__":
     print(RequestBuilder(Client(url='http://localhost', port=2222),
           verb=RequestBuilder.Verb.GET).query(query)) """
 
-    print(RateOptions(counter=False, drop_resets=True, counter_max=100, reset_value=1000))
+    #print(RateOptions(counter=False, drop_resets=True, counter_max=100, reset_value=1000))
