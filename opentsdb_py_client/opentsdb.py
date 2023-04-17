@@ -6,6 +6,7 @@ class Client():
     ENDPOINT_AGGREGATORS = '/api/aggregators'
     ENDPOINT_VERSION = '/api/version'
     ENDPOINT_CONFIG = '/api/config'
+    ENDPOINT_FILTERS = '/api/config/filters'
 
     def __init__(self, url: str, port: int):
         """Initializes the OpenTSDB class.
@@ -19,7 +20,9 @@ class Client():
         self._complete_url = f'{self._url}:{self._port}'
         self._server_config = {}
         self._server_version = {}
+        self._server_filters = {}
         self._server_aggregators = []
+        self._session = requests.Session()
 
     @property
     def url(self) -> str:
@@ -47,7 +50,16 @@ class Client():
             str: Complete OpenTSDB server url.
         """
         return self._complete_url
+    
+    def update_filters(self) -> None:
+        url = f'{self._complete_url}{self.ENDPOINT_FILTERS}'
+        self._server_filters = requests.get(url=url).json()
 
+    @property
+    def filters(self) -> dict:
+        if not self._server_filters:
+            self.update_filters()
+        return self._server_filters
 
     def update_aggregators(self) -> None:
         url = f'{self._complete_url}{self.ENDPOINT_AGGREGATORS}'
@@ -229,6 +241,10 @@ class RequestBuilder:
         TIME_ZONE = "time_zone"
         USE_CALENDAR = "use_calendar"
 
+    @property
+    def client(self) -> Client:
+        return self._client
+
     @builder
     def start(self, start: str) -> "RequestBuilder":
         self._parameters["start"] = start
@@ -317,26 +333,26 @@ class RequestBuilder:
         pass
 
     def build_request(self) -> requests.Request:
-        return requests.Request(self._verb, self._client.complete_url + self._BASE_QUERY_URL, params=self.parameters())
+        return requests.Request(self._verb, self.client._complete_url + self._BASE_QUERY_URL, params=self.parameters())
 
     def run(self) -> requests.Response:
         self.validate()
-        return requests.request(self._verb, self._client.complete_url + self._BASE_QUERY_URL, params=self.parameters())
+        return self.build_request().prepare().send(self.client.session)
 
     def _parameter_string(self) -> str:
         param = "&".join(f'{p[0]}={p[1]}' for p in self.parameters())
         return param
 
     def __str__(self) -> str:
-        return f"{self._verb} {self._client.complete_url}{self._BASE_QUERY_URL}?{self._parameter_string()}"
+        return f"{self._verb} {self.client.complete_url}{self._BASE_QUERY_URL}?{self._parameter_string()}"
 
     def __repr__(self) -> str:
         pass
 
 
-class GetRequestBuilder(RequestBuilder):
-    def __init__(self, client: Client, start: str = None, end: str = None, queries: List["QueryBuilder"] = None, no_annotations: bool = None, global_annotations: bool = None, ms_resolution: bool = None, show_tsuids: bool = None, show_summary: bool = None, show_stats: bool = None, show_query: bool = None, delete: bool = None, time_zone: str = None, use_calendar: bool = None):
-        super().__init__(self, verb=RequestBuilder.Verb.GET)
+class GetRequestBuilder(RequestBuilder): # TODO: make start an explicite required parameter
+    def __init__(self, client: Client, **parameters: Any):
+        super().__init__(client, RequestBuilder.Verb.GET, **parameters)
 
     def validate(self) -> None:
         return super().validate()
@@ -345,14 +361,14 @@ class GetRequestBuilder(RequestBuilder):
         return super().__str__()
 
 
-class PostRequestBuilder(RequestBuilder):
+class PostRequestBuilder(RequestBuilder): #FIXME: See GetRequestBuilder
     def __init__(self, client: Client, start: str = None, end: str = None, queries: List["QueryBuilder"] = None, no_annotations: bool = None, global_annotations: bool = None, ms_resolution: bool = None, show_tsuids: bool = None, show_summary: bool = None, show_stats: bool = None, show_query: bool = None, delete: bool = None, time_zone: str = None, use_calendar: bool = None):
-        super().__init__(self, verb=RequestBuilder.Verb.POST)
+        super().__init__(verb=RequestBuilder.Verb.POST)
 
 
-class DeleteRequestBuilder(RequestBuilder):
+class DeleteRequestBuilder(RequestBuilder): #FIXME: See GetRequestBuilder
     def __init__(self, client: Client, start: str = None, end: str = None, queries: List["QueryBuilder"] = None, no_annotations: bool = None, global_annotations: bool = None, ms_resolution: bool = None, show_tsuids: bool = None, show_summary: bool = None, show_stats: bool = None, show_query: bool = None, delete: bool = None, time_zone: str = None, use_calendar: bool = None):
-        super().__init__(self, verb=RequestBuilder.Verb.DELETE)
+        super().__init__(verb=RequestBuilder.Verb.DELETE)
 
 
 class QueryBuilder:
@@ -457,21 +473,21 @@ class Filter:
 
 
 if __name__ == "__main__":
-    """ query = MetricQueryBuilder(
-        aggregator="sum",
-        metric="sys.cpu.user",
-        rate=True,
-        rate_options=RateOptions(
-            counter=True, counter_max=100, reset_value=0, drop_resets=True),
-        downsample="1m-avg",
-        filters=[Filter(type="wildcard", tagk="host", filter="*", group_by=True),
+    #http://lsx-kubemaster-1.informatik.uni-wuerzburg.de:31617/api/query?start=1546297200&end=1548975600&m=avg:1d-avg:temperature{app=we4bee,name=*,beehive=f9311d93-afae-48a2-afa1-371df04b66ec}
+    client = Client(
+        url='http://lsx-kubemaster-1.informatik.uni-wuerzburg.de', port=31617)
+    q = MetricQueryBuilder(
+        aggregator="avg",
+        metric="temperature",
+        downsample="1d-avg",
+        filters=[Filter(type="wildcard", tagk="app", filter="*", group_by=True),
                  Filter(type="literal_or", tagk="dc", filter="lga,ord", group_by=False)],
-        explicit_tags=True,
-        percentiles=[0.5, 0.95],
-        rollup_usage="ROLLUP_NOFALLBACK"
     )
+    rb = client.get().add_queries([q]).start(1546297200).end(1548975600)
 
-    print(RequestBuilder(Client(url='http://localhost', port=2222),
-          verb=RequestBuilder.Verb.GET).query(query)) """
+    print(str(rb.client))
+
+    request = rb.build_request()
+    print(request.prepare().url)
 
     #print(RateOptions(counter=False, drop_resets=True, counter_max=100, reset_value=1000))
