@@ -1,14 +1,11 @@
 import requests
-from typing import Any, Callable, Dict, List, Tuple, Union
+from typing import Any, List, Tuple, Union
+
+from opentsdb_py_client.utils import _builder, Endpoint, RequestParameter, Verb
 
 
 class Client():
-    ENDPOINT_AGGREGATORS = '/api/aggregators'
-    ENDPOINT_VERSION = '/api/version'
-    ENDPOINT_CONFIG = '/api/config'
-    ENDPOINT_FILTERS = '/api/config/filters'
-
-    def __init__(self, url: str, port: int):
+    def __init__(self, url: str, port: int, session: requests.Session = requests.Session()):
         """Initializes the OpenTSDB class.
 
         Args:
@@ -22,7 +19,7 @@ class Client():
         self._server_version = {}
         self._server_filters = {}
         self._server_aggregators = []
-        self._session = requests.Session()
+        self._session = session
 
     @property
     def url(self) -> str:
@@ -52,7 +49,7 @@ class Client():
         return self._complete_url
     
     def update_filters(self) -> None:
-        url = f'{self._complete_url}{self.ENDPOINT_FILTERS}'
+        url = f'{self._complete_url}{Endpoint.FILTERS}'
         self._server_filters = requests.get(url=url).json()
 
     @property
@@ -62,7 +59,7 @@ class Client():
         return self._server_filters
 
     def update_aggregators(self) -> None:
-        url = f'{self._complete_url}{self.ENDPOINT_AGGREGATORS}'
+        url = f'{self._complete_url}{Endpoint.AGGREGATORS}'
         self._server_aggregators = requests.get(url=url).json()
 
     @property
@@ -91,7 +88,7 @@ class Client():
         Returns:
             dict: Version of the set OpenTSDB server.
         """
-        url = f'{self._complete_url}{self.ENDPOINT_VERSION}'
+        url = f'{self._complete_url}{Endpoint.VERSION}'
         self._server_version = requests.get(url=url).json()
 
     @property
@@ -149,7 +146,7 @@ class Client():
             "tsd.rpc.plugins": "net.opentsdb.tsd.DummyRpcPlugin"
         }`
         """
-        url = f'{self._complete_url}{self.ENDPOINT_CONFIG}'
+        url = f'{self._complete_url}{Endpoint.CONFIG}'
         self._server_config = requests.get(url=url).json()
 
     @property
@@ -157,14 +154,6 @@ class Client():
         if not self._server_config:
             self.update_config()
         return self._server_config
-
-    def request(self) -> 'Request':
-        """Returns a new Request object.
-
-        Returns:
-            Request: Request object.
-        """
-        return Request(self)
 
     def get(self) -> 'GetRequestBuilder':
         """Returns a new GetRequestBuilder object.
@@ -175,139 +164,80 @@ class Client():
         return GetRequestBuilder(self)
 
 
-def builder(func: Callable) -> Callable:
-    """
-    Decorator for wrapper "builder" functions.  These are functions on the Query class or other classes used for
-    building queries which mutate the query and return self.  To make the build functions immutable, this decorator is
-    used which will deepcopy the current instance.  This decorator will return the return value of the inner function
-    or the new copy of the instance.  The inner function does not need to return self.
-    """
-    import copy
-
-    def _copy(self, *args, **kwargs):
-        self_copy = copy.copy(self)
-        result = func(self_copy, *args, **kwargs)
-
-        # Return self if the inner function returns None.  This way the inner function can return something
-        # different (for example when creating joins, a different builder is returned).
-        if result is None:
-            return self_copy
-
-        return result
-
-    return _copy
-
-
-class Request:
-    def __init__(self, client: Client):
-        self._client = client
-
-    def get(self) -> "GetRequestBuilder":
-        return GetRequestBuilder(client=self._client)
-
-    def post(self) -> "PostRequestBuilder":
-        return PostRequestBuilder(client=self._client)
-
-    def delete(self) -> "DeleteRequestBuilder":
-        return DeleteRequestBuilder(client=self._client)
-
-
 class RequestBuilder:
-    _BASE_QUERY_URL = "/api/query"
-
     def __init__(self, client: Client, verb: str, **parameters):
         self._client = client
         self._verb = verb
         self._parameters = parameters if parameters is not None else {}
         self._parameters.setdefault("queries", [])
 
-    class Verb:
-        GET = "GET"
-        POST = "POST"
-        DELETE = "DELETE"
-
-    class Parameter:
-        START = "start"
-        END = "end"
-        QUERIES = "queries"
-        NO_ANNOTATIONS = "no_annotations"
-        GLOBAL_ANNOTATIONS = "global_annotations"
-        MS_RESOLUTION = "ms_resolution"
-        SHOW_TSUIDS = "show_tsuids"
-        SHOW_SUMMARY = "show_summary"
-        SHOW_STATS = "show_stats"
-        SHOW_QUERY = "show_query"
-        DELETE = "delete"
-        TIME_ZONE = "time_zone"
-        USE_CALENDAR = "use_calendar"
-
     @property
     def client(self) -> Client:
         return self._client
 
-    @builder
+    @_builder
     def start(self, start: str) -> "RequestBuilder":
         self._parameters["start"] = start
 
-    @builder
+    @_builder
     def end(self, end: str) -> "RequestBuilder":
         self._parameters["end"] = end
 
-    @builder
+    @_builder
     def query(self, query: "QueryBuilder") -> "RequestBuilder":
         self._parameters["queries"].append(query)
 
-    @builder
+    @_builder
     def no_annotations(self, no_annotations: bool) -> "RequestBuilder":
         self._parameters["no_annotations"] = no_annotations
 
-    @builder
+    @_builder
     def global_annotations(self, global_annotations: bool) -> "RequestBuilder":
         self._parameters["global_annotations"] = global_annotations
 
-    @builder
+    @_builder
     def ms_resolution(self, ms_resolution: bool) -> "RequestBuilder":
         self._parameters["ms_resolution"] = ms_resolution
 
-    @builder
+    @_builder
     def show_tsuids(self, show_tsuids: bool) -> "RequestBuilder":
         self._parameters["show_tsuids"] = show_tsuids
 
-    @builder
+    @_builder
     def show_summary(self, show_summary: bool) -> "RequestBuilder":
         self._parameters["show_summary"] = show_summary
 
-    @builder
+    @_builder
     def show_stats(self, show_stats: bool) -> "RequestBuilder":
         self._parameters["show_stats"] = show_stats
 
-    @builder
+    @_builder
     def show_query(self, show_query: bool) -> "RequestBuilder":
         self._parameters["show_query"] = show_query
 
-    @builder
+    @_builder
     def delete(self, delete: bool) -> "RequestBuilder":
         self._parameters["delete"] = delete
 
-    @builder
+    @_builder
     def time_zone(self, time_zone: str) -> "RequestBuilder":
         self._parameters["time_zone"] = time_zone
 
-    @builder
+    @_builder
     def use_calendar(self, use_calendar: bool) -> "RequestBuilder":
         self._parameters["use_calendar"] = use_calendar
 
-    @builder
+    @_builder
     def add_queries(self, queries: List["QueryBuilder"]) -> "RequestBuilder":
         self._parameters["queries"].extend(queries)
 
-    @builder
+    @_builder
     def add_metric_query(self, metric: str, aggregator: str, downsample: str = None, rate: bool = None, rate_options: str = None,
                          explicit_tags: bool = None, filters: List["Filter"] = None, percentiles: List[float] = None, rollup_usage: str = None) -> "RequestBuilder":
         self._parameters["queries"].append(MetricQueryBuilder(metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
                                                               explicit_tags=explicit_tags, filters=filters, percentiles=percentiles, rollup_usage=rollup_usage))
 
-    @builder
+    @_builder
     def add_tsuids_query(self, metric: str, aggregator: str, downsample: str = None, rate: bool = None, rate_options: str = None,
                          explicit_tags: bool = None, filters: List["Filter"] = None, percentiles: List[float] = None, rollup_usage: str = None) -> "RequestBuilder":
         self._parameters["queries"].append(TSUIDQueryBuilder(
@@ -333,7 +263,7 @@ class RequestBuilder:
         pass
 
     def build_request(self) -> requests.Request:
-        return requests.Request(self._verb, self.client._complete_url + self._BASE_QUERY_URL, params=self.parameters())
+        return requests.Request(self._verb, self.client._complete_url + Endpoint.QUERY, params=self.parameters())
 
     def run(self) -> requests.Response:
         self.validate()
@@ -352,7 +282,7 @@ class RequestBuilder:
 
 class GetRequestBuilder(RequestBuilder): # TODO: make start an explicite required parameter
     def __init__(self, client: Client, **parameters: Any):
-        super().__init__(client, RequestBuilder.Verb.GET, **parameters)
+        super().__init__(client, Verb.GET, **parameters)
 
     def validate(self) -> None:
         return super().validate()
@@ -489,5 +419,7 @@ if __name__ == "__main__":
 
     request = rb.build_request()
     print(request.prepare().url)
+
+    print(client.filters)
 
     #print(RateOptions(counter=False, drop_resets=True, counter_max=100, reset_value=1000))
