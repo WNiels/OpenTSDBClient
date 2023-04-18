@@ -129,10 +129,10 @@ dmypy.json
 .pyre/
 
 .vscode/*
-!.vscode/settings.json
+# !.vscode/settings.json
 !.vscode/tasks.json
 !.vscode/launch.json
-!.vscode/extensions.json
+# !.vscode/extensions.json
 !.vscode/*.code-snippets
 
 # Local History for Visual Studio Code
@@ -140,5 +140,3 @@ dmypy.json
 
 # Built Visual Studio Code Extensions
 *.vsix
-main.ipynb
-.vscode/settings.json
