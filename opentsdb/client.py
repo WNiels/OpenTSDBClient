@@ -1,7 +1,8 @@
 import logging
 import requests
 
-from opentsdb.utils import Endpoints, RequestParameters, Filters
+from utils import Endpoints, RequestParameters, Filters
+import request
 
 logger = logging.getLogger(__name__)
 
@@ -186,29 +187,29 @@ class Client:
             self.update_config()
         return self._server_config
 
-    def get(self) -> "GetRequestBuilder":
+    def get(self) -> request.GetRequestBuilder:
         """Creates and returns a new GetRequestBuilder object.
 
         Returns:
             GetRequestBuilder: GetRequestBuilder object.
         """
-        return GetRequestBuilder(self)
+        return request.GetRequestBuilder(self)
 
-    def post(self) -> "PostRequestBuilder":
+    def post(self) -> request.PostRequestBuilder:
         """Creates and returns a new PostRequestBuilder object.
 
         Returns:
             PostRequestBuilder: PostRequestBuilder object.
         """
-        return PostRequestBuilder(self)
+        return request.PostRequestBuilder(self)
 
-    def delete(self) -> "DeleteRequestBuilder":
+    def delete(self) -> request.DeleteRequestBuilder:
         """Creates and returns a new DeleteRequestBuilder object.
 
         Returns:
             DeleteRequestBuilder: DeleteRequestBuilder object.
         """
-        return DeleteRequestBuilder(self)
+        return request.DeleteRequestBuilder(self)
 
 
 if __name__ == "__main__":
