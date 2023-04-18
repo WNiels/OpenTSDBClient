@@ -492,22 +492,4 @@ class Filter:
 
 
 if __name__ == "__main__":
-    #http://lsx-kubemaster-1.informatik.uni-wuerzburg.de:31617/api/query?start=1546297200&end=1548975600&m=avg:1d-avg:temperature{app=we4bee,name=*,beehive=f9311d93-afae-48a2-afa1-371df04b66ec}
-    client = Client(
-        url='http://lsx-kubemaster-1.informatik.uni-wuerzburg.de', port=31617)
-    q = MetricQueryBuilder(
-        aggregator="avg",
-        metric="temperature",
-        downsample="1d-avg",
-        filters=[
-            Filter(type=Filters.WILDCARD, tagk="name", filter="*", group_by=False),
-            Filter(type=Filters.ILITERAL_OR, tagk="app", filter="we4bee", group_by=False),
-            Filter(type=Filters.ILITERAL_OR, tagk="beehive", filter="f9311d93-afae-48a2-afa1-371df04b66ec", group_by=False)
-        ],
-    )
-    rb = client.get().add_queries([q]).start(1546297200).end(1548975600)
-    response = rb.run()
-
-    print(response)
-
-    #print(RateOptions(counter=False, drop_resets=True, counter_max=100, reset_value=1000))
+    print("Hello OpenTSDB!")
