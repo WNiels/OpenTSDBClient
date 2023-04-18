@@ -184,7 +184,7 @@ class RequestBuilder:
         return params
 
     def build(self) -> requests.Request:
-        """build the request.
+        """Builds a requests.Request object.
         Is done automatically when calling run.
         Might be used to create the request without sending it.
         Returns:
@@ -199,7 +199,7 @@ class RequestBuilder:
         return request
 
     def run(self) -> requests.Response:
-        """runs the request.
+        """Builds and runs a requests.Request object.
         Returns:
             requests.Response: The response object.
         """

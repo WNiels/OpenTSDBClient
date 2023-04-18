@@ -21,9 +21,10 @@ class RequestParameters:
 
 class Verbs:
     """HTTP verbs for use in requests."""
-    GET = "GET"
-    POST = "POST"
-    DELETE = "DELETE"
+    GET = "GET" # Used to retrieve data from OpenTSDB. Overrides can be provided to modify content. Note: Requests via GET can only use query string parameters; see the note below.
+    POST = "POST" # Used to update or create an object in OpenTSDB using the content body from the request. Will use a formatter to parse the content body
+    DELETE = "DELETE" # Used to delete data from the system
+    PUT = "PUT" # Replace an entire object in the system with the provided content
 
 
 class Endpoints:
@@ -117,6 +118,10 @@ def _builder(func: Callable) -> Callable:
         return result
 
     return _copy
+
+
+class Response:
+    pass
 
 
 if __name__ == "__main__":
