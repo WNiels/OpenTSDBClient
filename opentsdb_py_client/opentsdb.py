@@ -1,12 +1,18 @@
+import logging
 import requests
 from typing import Any, List, Tuple, Union
 
 from opentsdb_py_client.utils import _builder, Endpoint, RequestParameter, Verb, Filters
 
+logger = logging.getLogger(__name__)
 
-class Client():
+
+class Client:
     """OpenTSDB client class."""
-    def __init__(self, url: str, port: int, session: requests.Session = requests.Session()):
+
+    def __init__(
+        self, url: str, port: int, session: requests.Session = requests.Session()
+    ):
         """Initializes the OpenTSDB class.
 
         Args:
@@ -16,12 +22,14 @@ class Client():
         """
         self._url = url
         self._port = port
-        self._complete_url = f'{self._url}:{self._port}'
+        self._complete_url = f"{self._url}:{self._port}"
         self._server_config = {}
         self._server_version = {}
         self._server_filters = {}
         self._server_aggregators = []
         self._session = session
+
+        logger.info(f"Initialized OpenTSDB client with url: {self._complete_url}")
 
     @property
     def url(self) -> str:
@@ -49,10 +57,10 @@ class Client():
             str: Complete OpenTSDB server url.
         """
         return self._complete_url
-    
+
     def update_filters(self) -> None:
         """Updates the locally stored dict of available filters on the OpenTSDB server."""
-        url = f'{self._complete_url}{Endpoint.FILTERS}'
+        url = f"{self._complete_url}{Endpoint.FILTERS}"
         self._server_filters = requests.get(url=url).json()
 
     @property
@@ -68,7 +76,7 @@ class Client():
 
     def update_aggregators(self) -> None:
         """Updates the locally stored list of available aggregators on the OpenTSDB server."""
-        url = f'{self._complete_url}{Endpoint.AGGREGATORS}'
+        url = f"{self._complete_url}{Endpoint.AGGREGATORS}"
         self._server_aggregators = requests.get(url=url).json()
 
     @property
@@ -81,7 +89,7 @@ class Client():
         if not self._server_aggregators:
             self.update_aggregators()
         return self._server_aggregators
-    
+
     def update_version(self) -> None:
         """Updates the locally stored information on the servers OpenTSDB version.
 
@@ -102,7 +110,7 @@ class Client():
         Returns:
             dict: Version of the set OpenTSDB server.
         """
-        url = f'{self._complete_url}{Endpoint.VERSION}'
+        url = f"{self._complete_url}{Endpoint.VERSION}"
         self._server_version = requests.get(url=url).json()
 
     @property
@@ -115,7 +123,7 @@ class Client():
         if not self._server_version:
             self.update_version()
         return self._server_version
-    
+
     def update_config(self) -> None:
         """Updates the locally stored information on the servers OpenTSDB config.
 
@@ -165,7 +173,7 @@ class Client():
             "tsd.rpc.plugins": "net.opentsdb.tsd.DummyRpcPlugin"
         }`
         """
-        url = f'{self._complete_url}{Endpoint.CONFIG}'
+        url = f"{self._complete_url}{Endpoint.CONFIG}"
         self._server_config = requests.get(url=url).json()
 
     @property
@@ -179,23 +187,23 @@ class Client():
             self.update_config()
         return self._server_config
 
-    def get(self) -> 'GetRequestBuilder':
+    def get(self) -> "GetRequestBuilder":
         """Creates and returns a new GetRequestBuilder object.
 
         Returns:
             GetRequestBuilder: GetRequestBuilder object.
         """
         return GetRequestBuilder(self)
-    
-    def post(self) -> 'PostRequestBuilder':
+
+    def post(self) -> "PostRequestBuilder":
         """Creates and returns a new PostRequestBuilder object.
 
         Returns:
             PostRequestBuilder: PostRequestBuilder object.
         """
         return PostRequestBuilder(self)
-    
-    def delete(self) -> 'DeleteRequestBuilder':
+
+    def delete(self) -> "DeleteRequestBuilder":
         """Creates and returns a new DeleteRequestBuilder object.
 
         Returns:
@@ -212,7 +220,7 @@ class RequestBuilder:
             client (Client): Client object.
             verb (str): HTTP verb to use for the request. Either of "GET", "POST" or "DELETE".
             **parameters (dict): Additional parameters to pass to the request. Parameters must be supported by the given OpenTSDB server.
-        """        
+        """
         self._client = client
         self._verb = verb
         self._parameters = parameters if parameters is not None else {}
@@ -224,7 +232,7 @@ class RequestBuilder:
 
         Returns:
             Client: Client object.
-        """        
+        """
         return self._client
 
     @_builder
@@ -238,7 +246,7 @@ class RequestBuilder:
 
         Returns:
             RequestBuilder: New RequestBuilder object.
-        """        
+        """
         self._parameters["start"] = start
 
     @_builder
@@ -252,7 +260,7 @@ class RequestBuilder:
 
         Returns:
             RequestBuilder: New RequestBuilder object with the end parameter set.
-        """        
+        """
         self._parameters["end"] = end
 
     @_builder
@@ -266,7 +274,7 @@ class RequestBuilder:
 
         Returns:
             RequestBuilder: New RequestBuilder object with the query parameter set.
-        """        
+        """
         self._parameters["queries"].append(query)
 
     @_builder
@@ -280,7 +288,7 @@ class RequestBuilder:
 
         Returns:
             RequestBuilder: New RequestBuilder object with the no_annotations parameter set.
-        """        
+        """
         self._parameters["no_annotations"] = no_annotations
 
     @_builder
@@ -324,19 +332,60 @@ class RequestBuilder:
         self._parameters["queries"].extend(queries)
 
     @_builder
-    def add_metric_query(self, metric: str, aggregator: str, downsample: str = None, rate: bool = None, rate_options: str = None,
-                         explicit_tags: bool = None, filters: List["Filter"] = None, percentiles: List[float] = None, rollup_usage: str = None) -> "RequestBuilder":
-        self._parameters["queries"].append(MetricQueryBuilder(metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
-                                                              explicit_tags=explicit_tags, filters=filters, percentiles=percentiles, rollup_usage=rollup_usage))
+    def add_metric_query(
+        self,
+        metric: str,
+        aggregator: str,
+        downsample: str = None,
+        rate: bool = None,
+        rate_options: str = None,
+        explicit_tags: bool = None,
+        filters: List["Filter"] = None,
+        percentiles: List[float] = None,
+        rollup_usage: str = None,
+    ) -> "RequestBuilder":
+        self._parameters["queries"].append(
+            MetricQueryBuilder(
+                metric=metric,
+                aggregator=aggregator,
+                downsample=downsample,
+                rate=rate,
+                rate_options=rate_options,
+                explicit_tags=explicit_tags,
+                filters=filters,
+                percentiles=percentiles,
+                rollup_usage=rollup_usage,
+            )
+        )
 
     @_builder
-    def add_tsuids_query(self, metric: str, aggregator: str, downsample: str = None, rate: bool = None, rate_options: str = None,
-                         explicit_tags: bool = None, filters: List["Filter"] = None, percentiles: List[float] = None, rollup_usage: str = None) -> "RequestBuilder":
-        self._parameters["queries"].append(TSUIDQueryBuilder(
-            metric=metric, aggregator=aggregator, downsample=downsample, rate=rate, rate_options=rate_options,
-            explicit_tags=explicit_tags, filters=filters, percentiles=percentiles, rollup_usage=rollup_usage))
+    def add_tsuids_query(
+        self,
+        metric: str,
+        aggregator: str,
+        downsample: str = None,
+        rate: bool = None,
+        rate_options: str = None,
+        explicit_tags: bool = None,
+        filters: List["Filter"] = None,
+        percentiles: List[float] = None,
+        rollup_usage: str = None,
+    ) -> "RequestBuilder":
+        self._parameters["queries"].append(
+            TSUIDQueryBuilder(
+                metric=metric,
+                aggregator=aggregator,
+                downsample=downsample,
+                rate=rate,
+                rate_options=rate_options,
+                explicit_tags=explicit_tags,
+                filters=filters,
+                percentiles=percentiles,
+                rollup_usage=rollup_usage,
+            )
+        )
 
-    def parameters(self) -> List[Tuple[str, Any]]:
+    def _build_parameter_list(self) -> List[Tuple[str, Any]]:
         """Returns a list of tuples containing the parameters for the request.
 
         Returns:
@@ -348,53 +397,125 @@ class RequestBuilder:
                 params.extend(q.build() for q in v)
             else:
                 params.append((k, v))
+        logging.debug(f"Built parameter list: {params}")
         return params
 
-    def validate(self) -> None:
-        # TODO: Impleement validation
-        pass
+    def build(self) -> requests.Request:
+        """build the request.
 
-    def build_request(self) -> requests.Request:
-        return requests.Request(self._verb, self.client._complete_url + Endpoint.QUERY, params=self.parameters())
+        Is done automatically when calling run.
+        Might be used to create the request without sending it.
+
+        Returns:
+            requests.Request: The request object.
+        """        
+        request = requests.Request(
+            self._verb,
+            self.client._complete_url + Endpoint.QUERY,
+            params=self._build_parameter_list(),
+        )
+        logging.debug(f"Built request: {request}")
+        return request
 
     def run(self) -> requests.Response:
-        self.validate()
-        return self.client._session.send(self.build_request().prepare())
+        """runs the request.
 
-    def _parameter_string(self) -> str:
-        param = "&".join(f'{p[0]}={p[1]}' for p in self.parameters())
-        return param
-
-    def __str__(self) -> str:
-        return f"{self._verb} {self.client.complete_url}{self._BASE_QUERY_URL}?{self._parameter_string()}"
-
-    def __repr__(self) -> str:
-        pass
+        Returns:
+            requests.Response: The response object.
+        """        
+        with self.client._session as s:
+            pr = self.build().prepare()
+            logging.debug(f"Sending request: {pr}")
+            return s.send(pr)
 
 
-class GetRequestBuilder(RequestBuilder): # TODO: make start an explicite required parameter
+class GetRequestBuilder(
+    RequestBuilder
+):  # TODO: make start an explicite required parameter
     def __init__(self, client: Client, **parameters: Any):
+        """RequestBuilder for GET requests.
+
+        Used to specifically build GET requests.
+
+        Args:
+            client (Client): The client to use.
+        """        
         super().__init__(client, Verb.GET, **parameters)
 
-    def validate(self) -> None:
-        return super().validate()
-
-    def __str__(self) -> str:
-        return super().__str__()
 
 
-class PostRequestBuilder(RequestBuilder): #FIXME: See GetRequestBuilder
-    def __init__(self, client: Client, start: str = None, end: str = None, queries: List["QueryBuilder"] = None, no_annotations: bool = None, global_annotations: bool = None, ms_resolution: bool = None, show_tsuids: bool = None, show_summary: bool = None, show_stats: bool = None, show_query: bool = None, delete: bool = None, time_zone: str = None, use_calendar: bool = None):
+class PostRequestBuilder(RequestBuilder):  # FIXME: See GetRequestBuilder
+    def __init__(
+        self,
+        client: Client,
+        start: str = None,
+        end: str = None,
+        queries: List["QueryBuilder"] = None,
+        no_annotations: bool = None,
+        global_annotations: bool = None,
+        ms_resolution: bool = None,
+        show_tsuids: bool = None,
+        show_summary: bool = None,
+        show_stats: bool = None,
+        show_query: bool = None,
+        delete: bool = None,
+        time_zone: str = None,
+        use_calendar: bool = None,
+    ):
         super().__init__(verb=RequestBuilder.Verb.POST)
 
 
-class DeleteRequestBuilder(RequestBuilder): #FIXME: See GetRequestBuilder
-    def __init__(self, client: Client, start: str = None, end: str = None, queries: List["QueryBuilder"] = None, no_annotations: bool = None, global_annotations: bool = None, ms_resolution: bool = None, show_tsuids: bool = None, show_summary: bool = None, show_stats: bool = None, show_query: bool = None, delete: bool = None, time_zone: str = None, use_calendar: bool = None):
+class DeleteRequestBuilder(RequestBuilder):  # FIXME: See GetRequestBuilder
+    def __init__(
+        self,
+        client: Client,
+        start: str = None,
+        end: str = None,
+        queries: List["QueryBuilder"] = None,
+        no_annotations: bool = None,
+        global_annotations: bool = None,
+        ms_resolution: bool = None,
+        show_tsuids: bool = None,
+        show_summary: bool = None,
+        show_stats: bool = None,
+        show_query: bool = None,
+        delete: bool = None,
+        time_zone: str = None,
+        use_calendar: bool = None,
+    ):
         super().__init__(verb=RequestBuilder.Verb.DELETE)
 
 
 class QueryBuilder:
-    def __init__(self, aggregator: str = None, metric: str = None, rate: bool = None, rate_options: "RateOptions" = None, downsample: str = None, filters: List["Filter"] = None, explicit_tags: bool = None, percentiles: List[float] = None, rollup_usage: str = None):
+    def __init__(
+        self,
+        aggregator: str = None,
+        metric: str = None,
+        rate: bool = None,
+        rate_options: "RateOptions" = None,
+        downsample: str = None,
+        filters: List["Filter"] = None,
+        explicit_tags: bool = None,
+        percentiles: List[float] = None,
+        rollup_usage: str = None,
+    ):
+        """Base QueryBuilder.
+
+        Specific QueryBuilders should inherit from this class.
+        Should not be used directly. Use MetricQueryBuilder or TSUIDQueryBuilder instead.
+        Parameters set to None will not be included in the request. Thus invoking the default behaviour of the OpenTSDB Instance.
+
+        Args:
+            aggregator (str, optional): The name of an aggregation function to use. Defaults to None.
+            metric (str, optional): The name of a metric stored in the system. Defaults to None.
+            rate (bool, optional): Whether or not the data should be converted into deltas before returning. Defaults to None.
+            rate_options (RateOptions, optional): Monotonically increasing counter handling options. Defaults to None.
+            downsample (str, optional): An optional downsampling function to reduce the amount of data returned. Defaults to None.
+            filters (List[&quot;Filter&quot;], optional): Filters the time series emitted in the results. Defaults to None.
+            explicit_tags (bool, optional): Returns the series that include only the tag keys provided in the filters. Defaults to None.
+            percentiles (List[float], optional): Fetches histogram data for the metric and computes the given list of percentiles on the data. Percentiles are floating point values from 0 to 100.. Defaults to None.
+            rollup_usage (str, optional): An optional fallback mode when fetching rollup data. Defaults to None.
+        """        
         self._aggregator = aggregator
         self._metric = metric
         self._rate = rate
@@ -406,13 +527,13 @@ class QueryBuilder:
         self._rollup_usage = rollup_usage
 
     def build(self) -> str:
-        raise NotImplementedError()
+        raise NotImplementedError("This method should be implemented by the subclass. And not be used directly.")
 
 
 class MetricQueryBuilder(QueryBuilder):
     TYPE = "m"
 
-    def build(self) -> str:
+    def build(self) -> Tuple[str, str]:
         """Gnerates the query string for the metric query
 
         m=<aggregator>:[rate[{counter[,<counter_max>[,<reset_value>]]}]:][<down_sampler>:][percentiles\[<p1>, <pn>\]:][explicit_tags:]<metric_name>[{<tag_name1>=<grouping filter>[,...<tag_nameN>=<grouping_filter>]}][{<tag_name1>=<non grouping filter>[,...<tag_nameN>=<non_grouping_filter>]}]
@@ -420,18 +541,18 @@ class MetricQueryBuilder(QueryBuilder):
         Returns:
             str: The query string
         """
-        string = f'{self._aggregator}:'
+        string = f"{self._aggregator}:"
 
         # [rate[{counter[,<counter_max>[,<reset_value>]]}]:]
         if self._rate is not None:
             string += str(self._rate)
             if self._rate_options is not None:
-                string += str(self._rate_options)
-            string += ':'
+                string += self._rate_options.build()
+            string += ":"
 
         # [<down_sampler>:]
         if self._downsample is not None:
-            string += f'{self._downsample}:'
+            string += f"{self._downsample}:"
 
         # [percentiles\[<p1>, <pn>\]:]
         if len(self._percentiles) > 0:
@@ -447,19 +568,20 @@ class MetricQueryBuilder(QueryBuilder):
         # [{<tag_name1>=<grouping filter>[,...<tag_nameN>=<grouping_filter>]}]
         grouping_filters = [f for f in self._filters if f._group_by is True]
         if len(grouping_filters) > 0:
-            string += '{'
-            string += ','.join([str(f) for f in grouping_filters])
-            string += '}'
+            string += "{"
+            string += ",".join([f.build() for f in grouping_filters])
+            string += "}"
 
         # [{<tag_name1>=<non grouping filter>[,...<tag_nameN>=<non_grouping_filter>]}]
-        non_grouping_filters = [
-            f for f in self._filters if f._group_by is False]
+        non_grouping_filters = [f for f in self._filters if f._group_by is False]
         if len(non_grouping_filters) > 0:
-            string += '{'
-            string += ','.join([str(f) for f in non_grouping_filters])
-            string += '}'
+            string += "{"
+            string += ",".join([f.build() for f in non_grouping_filters])
+            string += "}"
 
-        return (self.TYPE, string)
+        query = (self.TYPE, string)
+        logging.debug(f"Metric Query: {query}")
+        return query
 
 
 class TSUIDQueryBuilder(QueryBuilder):
@@ -468,27 +590,43 @@ class TSUIDQueryBuilder(QueryBuilder):
 
 
 class RateOptions:
-    def __init__(self, counter: bool = None, counter_max: int = None, reset_value: int = None, drop_resets: bool = None):
+    def __init__(
+        self,
+        counter: bool = None,
+        counter_max: int = None,
+        reset_value: int = None,
+        drop_resets: bool = None,
+    ):
         self._counter = counter
         self._counter_max = counter_max
         self._reset_value = reset_value
         self._drop_resets = drop_resets
 
     # [{counter[,<counter_max>[,<reset_value>]]}]
-    def __str__(self) -> str:
-        return f'\u007b{self._counter if self._counter is not None else ""},{self._counter_max if self._counter_max is not None else ""},{self._reset_value if self._reset_value is not None else ""}\u007d'
+    def build(self) -> str:
+        ro = f'\u007b{self._counter if self._counter is not None else ""},{self._counter_max if self._counter_max is not None else ""},{self._reset_value if self._reset_value is not None else ""}\u007d'
+        logging.debug(f"RateOptions: {ro}")
+        return ro
 
 
 class Filter:
-    def __init__(self, type: str = None, tagk: str = None, filter: str = None, group_by: bool = None):
+    def __init__(
+        self,
+        type: str = None,
+        tagk: str = None,
+        filter: str = None,
+        group_by: bool = None,
+    ):
         self._type = type
         self._tagk = tagk
         self._filter = filter
         self._group_by = group_by
 
     # <tag_name1>=<non grouping filter>
-    def __str__(self) -> str:
-        return f'{self._tagk}={self._type}({self._filter})'
+    def build(self) -> str:
+        f = f"{self._tagk}={self._type}({self._filter})"
+        logging.debug(f"Filter: {f}")
+        return f
 
 
 if __name__ == "__main__":
