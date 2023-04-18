@@ -2,7 +2,7 @@ import copy
 from typing import Callable
 
 
-class RequestParameter:
+class RequestParameters:
     """Request parameters for the OpenTSDB API."""
     START = "start"
     END = "end"
@@ -19,14 +19,14 @@ class RequestParameter:
     USE_CALENDAR = "use_calendar"
 
 
-class Verb:
+class Verbs:
     """HTTP verbs for use in requests."""
     GET = "GET"
     POST = "POST"
     DELETE = "DELETE"
 
 
-class Endpoint:
+class Endpoints:
     """Endpoints for the OpenTSDB API."""
     QUERY = "/api/query"
     AGGREGATORS = "/api/aggregators"
