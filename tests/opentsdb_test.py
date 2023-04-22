@@ -1,5 +1,5 @@
 import pytest
-import opentsdb.client
+from ..opentsdb.request import RequestBuilder
 
 
 def f():
