@@ -3,8 +3,8 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "opentsdbclient"
-version = "0.0.1"
+name = "opentsdb2py"
+version = "0.1.1"
 authors = [
   { name="Niels Westphal", email="opentsdbclient@nielswestphal.de" },
 ]
