@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "opentsdb2py"
-version = "0.1.1"
+version = "0.1.3"
 authors = [
   { name="Niels Westphal", email="opentsdbclient@nielswestphal.de" },
 ]
