@@ -1,6 +1,6 @@
-from opentsdb.client import Client
-from opentsdb.query import Filter, MetricQueryBuilder, QueryBuilder, TSUIDQueryBuilder
-from opentsdb.utils import Endpoints, Verbs, _builder
+from opentsdb2py.client import Client
+from opentsdb2py.query import Filter, MetricQueryBuilder, QueryBuilder, TSUIDQueryBuilder
+from opentsdb2py.utils import Endpoints, Verbs, _builder
 
 
 import requests
