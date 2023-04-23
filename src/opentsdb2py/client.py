@@ -1,7 +1,7 @@
 import logging
 import requests
 
-from utils import Endpoints, RequestParameters, Filters
+from .utils import Endpoints, RequestParameters, Filters
 import request
 
 logger = logging.getLogger(__name__)
