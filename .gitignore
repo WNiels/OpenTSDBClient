@@ -144,3 +144,4 @@ main.ipynb
 
 # Custome ignores
 OpenTSDBClient.code-workspace
+poetry.lock
