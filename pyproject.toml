@@ -11,7 +11,7 @@ readme = "README.md"
 "Bug Tracker" = "https://github.com/WNiels/OpenTSDBClient/issues"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = "^3.11"
 requests = "^2.28.2"
 
 [tool.poetry.group.dev.dependencies]
